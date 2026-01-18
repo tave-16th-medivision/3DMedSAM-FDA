@@ -1,16 +1,11 @@
-# 3DSAM-LLA
-3D SAM with LLA(Loss-Less Adaptation) for Prompt-based Medical Image Segmentation
+# 3DSAM-FDA
+A Frequency-based Dual-Path Adapter for 3D Medical Image Segmentation
+본 논문은 기존 3D SAM Adapter가 전역적인 의미 정보에 비해 국소 구조와 경계 정보를 충분히 반영하지 못하는 한계를 극복하기 위해 제안되었습니다. 우리는 전역 문맥 정보와 주파수 기반의 국소 정보를 병렬적으로 처리하는 새로운 이중 경로 어댑터(Dual-Path Adapter)를 소개합니다.
 
-## 개요 (Abstract)
+## Abstract
+프롬프트 기반 분할 모델(Segment Anything Model, SAM)을 3차원 의료 영상에 적용하려는 시도가 늘어나고 있습니다. 하지만 기존 3D 어댑터 구조는 종양과 같이 크기가 작고 경계가 불명확한 병변을 정밀하게 분할하는 데 한계가 있습니다.
 
-**3DSAM-LLA**는 TAVE 16기 MediVision 팀의 후반기 프로젝트로, 3D 의료 영상(CT, MRI 등)을 위한 SAM 성능 향상 연구를 주제로 합니다. 선행 연구인 3DSAM-adapter를 기반으로, 우리는 어댑터를 두 가지 경로로 나누는 Dual-path adapter 설계를 제안합니다. **Dual-path Adapter**는 기존 depth-wise 3D conv 대신, global branch(3D attention) + local branch(3D conv) 병렬 결합으로 다양한 공간 스케일 정보 보존하도록 설계한 어댑터 구조입니다. 이를 통해 세밀한 구조 정보 손실을 최소화하는 것을 기대합니다. 
-
-## 진행 상태 (Current State)
-
-현재 저희 프로젝트는 막 시작한 상태로, 이 레포지토리에는 baseline에 해당하는 3DSAM-adapter코드와, 저희 아이디어를 구현할 3DSAM-LLA 폴더 안에 기본적인 SAM 코드가 올라와 있습니다. 
-
-## 폴더 설명 (Description)
-
-- `3DSAM-LLA/` : 본 프로젝트의 핵심인 **Dual-path Adapter (LLA)**를 구현하는 메인 디렉토리입니다. 현재는 SAM의 기본 코드를 기반으로 하며, 향후 Global branch(3D attention)와 Local branch(3D conv)를 병렬 결합하는 저희의 고유한 어댑터 구조로 수정 및 개발이 진행될 공간입니다.
-
-- `baseline/3DSAM-adapter/` : 성능 비교의 기준점이 되는 선행 연구, 3DSAM-adapter의 공식 코드가 위치한 디렉토리입니다. 저희가 제안하는 LLA 모델의 성능 향상 정도를 측정하기 위한 베이스라인으로 사용됩니다.
+3DMedSAM-FDA는 다음과 같은 특징을 가집니다:
+- 이중 경로 구조 (Dual-Path Architecture): 전역 문맥 경로(Global Context Path)와 국소 경로(Local Path)를 병렬로 결합했습니다.
+- 주파수 도메인 활용 (Frequency Domain Analysis): 국소 경로에서 3D FFT를 통해 고주파 성분을 선택적으로 강조하여 경계 및 미세 구조 정보를 보강합니다.
+- 게이트 융합 (Gated Fusion): 전역 특징으로부터 생성된 게이트를 통해 국소 특징의 기여도를 조절하여 두 정보를 효과적으로 통합합니다.
