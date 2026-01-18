@@ -8,7 +8,9 @@ from segment_anything.modeling.common import LayerNorm2d, MLPBlock
 from segment_anything.modeling.image_encoder import Attention, PatchEmbed, window_partition, window_unpartition
 
 # Adapter module 
-from adapter import Adapter
+# from adapter import Adapter # 기본 3D Adapter
+# from adapter_convlocal import Adapter # 3DMedSAM의 2.5D Local Conv Adapter
+from adapter_fftlocal import Adapter # 3DMedSAM의 FFT 기반 Local Adapter
 
 class LayerNorm3d(nn.Module):
     def __init__(self, num_channels: int, eps: float = 1e-6) -> None:
