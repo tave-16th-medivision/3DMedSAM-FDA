@@ -1,6 +1,6 @@
-# 3DSAM-FDA
+# 3DMedSAM-FDA
 A Frequency-based Dual-Path Adapter for 3D Medical Image Segmentation
-본 논문은 기존 3D SAM Adapter가 전역적인 의미 정보에 비해 국소 구조와 경계 정보를 충분히 반영하지 못하는 한계를 극복하기 위해 제안되었습니다. 우리는 전역 문맥 정보와 주파수 기반의 국소 정보를 병렬적으로 처리하는 새로운 이중 경로 어댑터(Dual-Path Adapter)를 소개합니다.
+3DMedSAM-FDA는 기존 3D SAM Adapter가 전역적인 의미 정보에 비해 국소 구조와 경계 정보를 충분히 반영하지 못하는 한계를 극복하기 위해 제안되었습니다. 우리는 전역 문맥 정보와 주파수 기반의 국소 정보를 병렬적으로 처리하는 새로운 이중 경로 어댑터(Dual-Path Adapter)를 소개합니다.
 
 ## Abstract
 프롬프트 기반 분할 모델(Segment Anything Model, SAM)을 3차원 의료 영상에 적용하려는 시도가 늘어나고 있습니다. 하지만 기존 3D 어댑터 구조는 종양과 같이 크기가 작고 경계가 불명확한 병변을 정밀하게 분할하는 데 한계가 있습니다.
