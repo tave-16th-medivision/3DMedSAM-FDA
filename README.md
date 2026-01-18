@@ -9,3 +9,12 @@ A Frequency-based Dual-Path Adapter for 3D Medical Image Segmentation
 - 이중 경로 구조 (Dual-Path Architecture): 전역 문맥 경로(Global Context Path)와 국소 경로(Local Path)를 병렬로 결합했습니다.
 - 주파수 도메인 활용 (Frequency Domain Analysis): 국소 경로에서 3D FFT를 통해 고주파 성분을 선택적으로 강조하여 경계 및 미세 구조 정보를 보강합니다.
 - 게이트 융합 (Gated Fusion): 전역 특징으로부터 생성된 게이트를 통해 국소 특징의 기여도를 조절하여 두 정보를 효과적으로 통합합니다.
+
+## Architecture
+전체 프레임워크는 이미지 인코더, 프롬프트 인코더, 마스크 디코더로 구성되며, 제안하는 어댑터는 다음과 같이 동작합니다:
+1. Global Context Path: $3 \times 3 \times 3$ Depth-wise Conv를 사용하여 3차원 형태와 장기 문맥 정보를 포착합니다
+2. Local Frequency Path:
+   - 입력 특징을 주파수 도메인으로 변환 (FFT).
+   - 반경 기반 마스크 $M(r)$를 적용하여 고주파 성분(경계 정보) 증폭.
+   - 공간 도메인으로 복원 (IFFT) 후 $1 \times 1 \times 1$ Conv 적용.
+3. Adaptive Fusion: 전역 경로의 정보를 바탕으로 국소 경로 정보의 반영 비율을 조정하여 결합합니다. 
