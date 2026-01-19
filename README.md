@@ -91,6 +91,9 @@ python train.py --data kits --snapshot_path "path/to/snapshot/" --data_prefix "p
 python test.py --data kits --snapshot_path "path/to/snapshot/" --data_prefix "path/to/data folder/"  --num_prompts 1 
 ```
 
+#### 3. Detailed Experiments 
+이외의 여러 세부적인 실험(모델 파라미터 분석, 2D/3D 시각화, 단일 케이스 추론 등)은 `notebooks/experiment.ipynb`에 사용 방법이 정리되어 있습니다. 
+
 ### Project Structure
 ```
 3DMedSAM-FDA/
