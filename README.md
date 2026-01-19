@@ -51,6 +51,9 @@
 
 ## Others
 
+### Model Checkpoints
+학습한 모델 가중치 파일 및 로그는 github release를 통해 확인할 수 있습니다.
+
 ### Installation
 본 프로젝트는 Python 3.8+, PyTorch, CUDA 환경을 기반으로 합니다. 
 실험은 모두 NVIDIA A40 GPU 1x 환경에서 진행되었습니다. (주의: FFT based Dual-path Adapter는 A100에서 학습이 불안정할 수 있습니다.)
