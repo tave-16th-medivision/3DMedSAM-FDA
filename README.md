@@ -54,6 +54,7 @@
 ### Installation
 본 프로젝트는 Python 3.8+, PyTorch, CUDA 환경을 기반으로 합니다. 
 실험은 모두 NVIDIA A40 GPU 1x 환경에서 진행되었습니다. (주의: FFT based Dual-path Adapter는 A100에서 학습이 불안정할 수 있습니다.)
+GPU 환경은 [Vast.ai](https://vast.ai/)라는 GPU 서버 인스턴스 대여 플랫폼을 활용하였습니다. (`vastai-guide.md`의 사용법 상세 내용 참고.) 
 아래 명령어를 통해 필요한 환경을 구성하고 의존성을 설치할 수 있습니다. 
 
 Conda Environment (Recommended)
@@ -99,11 +100,13 @@ python test.py --data kits --snapshot_path "path/to/snapshot/" --data_prefix "pa
 │   ├── prompt_encoder.py
 │   ├── adapter.py             # Original Adapter
 │   ├── adapter_convlocal.py   # Spatial(Conv) Path Implementation
-│   └── adapter_fftlocal.py    # Frequency(FFT) Path Implementation (Proposed)
+│   ├── adapter_fftlocal.py    # Frequency(FFT) Path Implementation (Proposed)
+│   └── ... 
 ├── dataset/                   # Dataloader
 ├── utils/
 ├── train.py                   # Training Script
-└── test.py                    # Inference Script
+├── test.py                    # Inference Script
+└── ... 
 ```
 
 ### Acknowledgements
