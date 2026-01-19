@@ -47,6 +47,65 @@
 
 위는 정성적 실험 결과로, 특히 Liver Tumor, Colon Tumor와 같은 미세한 질감 및 경계가 중요한 모달리티에서 기존 3D SAM Adapter 대비 우수한 성능을 보이는 것을 시각화합니다. 
 
+---
 
+## Others
 
+### Installation
+본 프로젝트는 Python 3.8+, PyTorch, CUDA 환경을 기반으로 합니다. 
+실험은 모두 NVIDIA A40 GPU 1x 환경에서 진행되었습니다. (주의: FFT based Dual-path Adapter는 A100에서 학습이 불안정할 수 있습니다.)
+아래 명령어를 통해 필요한 환경을 구성하고 의존성을 설치할 수 있습니다. 
 
+Conda Environment (Recommended)
+```
+# 1. Create and activate conda environment
+conda create -y -n med_sam python=3.9.16 
+conda activate med_sam
+
+# 2. Install PyTorch & Torchvision (CUDA 11.3)
+# 환경에 맞게 설치 필요 
+pip install torch==1.12.1+cu113 torchvision==0.13.1+cu113 --extra-index-url https://download.pytorch.org/whl/cu113 
+
+# 3. Install Segment Anything & Surface Distance
+pip install git+https://github.com/facebookresearch/segment-anything.git 
+pip install git+https://github.com/deepmind/surface-distance.git 
+
+# 4. Install remaining dependencies
+pip install -r requirements.txt 
+```
+
+### Data Preparation
+실험에 사용된 데이터셋(KiTS 2021, MSD-Pancreas, LiTS 2017, MSD-Colon)의 전처리 및 디렉토리 구조는 [3DSAM-Adapter](https://github.com/med-air/3DSAM-adapter)의 가이드를 따릅니다. 
+
+### Usage
+#### 1. Train
+모델 학습을 위해 `3DMedSAM-FDA/train.py`를 실행합니다.
+```
+python train.py --data kits --snapshot_path "path/to/snapshot/" --data_prefix "path/to/data folder/" --max_epoch 200 
+```
+
+#### 2. Inference (Test) 
+학습된 모델을 평가하기 위해 `3DMedSAM-FDA/test.py`를 실행합니다.
+```
+python test.py --data kits --snapshot_path "path/to/snapshot/" --data_prefix "path/to/data folder/"  --num_prompts 1 
+```
+
+### Project Structure
+```
+3DMedSAM-FDA/
+├── modeling/
+│   ├── image_encoder.py       # Simply Modified Image Encoder with Adapter import 
+│   ├── mask_decoder.py
+│   ├── prompt_encoder.py
+│   ├── adapter.py             # Original Adapter
+│   ├── adapter_convlocal.py   # Spatial(Conv) Path Implementation
+│   └── adapter_fftlocal.py    # Frequency(FFT) Path Implementation (Proposed)
+├── dataset/                   # Dataloader
+├── utils/
+├── train.py                   # Training Script
+└── test.py                    # Inference Script
+```
+
+### Acknowledgements
+이 프로젝트는 [3DSAM-Adapter](https://github.com/med-air/3DSAM-adapter)와 [Segment Anything](https://github.com/facebookresearch/segment-anything)을 기반으로 구축되었습니다. 
+훌륭한 연구와 코드를 공개해 주신 저자분들께 감사드립니다.
