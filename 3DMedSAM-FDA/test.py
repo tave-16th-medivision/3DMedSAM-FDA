@@ -1,15 +1,8 @@
-"""
-이 코드는 3DSAM-adapter 모델을 테스트하는 스크립트입니다. 
-명령줄 인수를 사용하여 데이터셋, 모델 스냅샷 경로, 크롭 크기, 장치 등을 지정할 수 있습니다.
-모델은 주어진 테스트 데이터셋에 대해 예측을 수행하고 Dice 계수와 NSD (Normalized Surface Dice) 지표를 계산하여 성능을 평가합니다.
-결과는 로깅되어 지정된 스냅샷 경로에 저장됩니다.
-"""
-
-from dataset.datasets import load_data_volume  # 테스트 데이터셋 로드 함수
+from dataset.datasets import load_data_volume
 import argparse
 import numpy as np
 import logging
-from monai.losses import DiceCELoss, DiceLoss  # MONAI의 segmentation용 손실 함수
+from monai.losses import DiceCELoss, DiceLoss
 from modeling.image_encoder import ImageEncoderViT_3d_v2 as ImageEncoderViT_3d
 import torch.nn.functional as F
 from modeling.mask_decoder import VIT_MLAHead_h as VIT_MLAHead
@@ -22,73 +15,50 @@ import surface_distance
 from surface_distance import metrics
 
 def main():
-    # -----------------------------
-    # 1. Argument 설정
-    # -----------------------------
     parser = argparse.ArgumentParser()
-    # 데이터셋 선택
     parser.add_argument(
         "--data", default=None, type=str, choices=["kits", "pancreas", "lits", "colon"]
     )
-    # 모델 스냅샷 경로
     parser.add_argument(
         "--snapshot_path",
         default="",
         type=str,
     )
-    # 데이터 경로 접두사
     parser.add_argument(
         "--data_prefix",
         default="",
         type=str,
     )
-    # 랜덤 크롭 크기
     parser.add_argument(
         "--rand_crop_size",
         default=0,
         nargs='+', type=int,
     )
-    # 디바이스 설정
     parser.add_argument(
         "--device",
         default="cuda:0",
         type=str,
     )
-    # 프롬프트 개수
     parser.add_argument(
         "--num_prompts",
         default=1,
         type=int,
     )
-    # 배치 크기
     parser.add_argument("-bs", "--batch_size", default=1, type=int)
-    # 클래스 수
     parser.add_argument("--num_classes", default=2, type=int)
-    # 워커 수
     parser.add_argument("--num_worker", default=6, type=int)
-    # 체크포인트 선택 (마지막 또는 최고 성능)
     parser.add_argument(
         "--checkpoint",
         default="last",
         type=str,
     )
-    # NSD 계산을 위한 허용 오차
     parser.add_argument("-tolerance", default=5, type=int)
     args = parser.parse_args()
-
-    # 체크포인트 파일 이름 결정
     if args.checkpoint == "last":
         file = "last.pth.tar"
     else:
         file = "best.pth.tar"
-
-    # -----------------------------
-    # 2. 기본 설정 및 로그 세팅
-    # -----------------------------
-    # 디바이스 설정
     device = args.device
-
-    # 랜덤 크롭 사이즈 설정 (입력되지 않은 경우 데이터셋별 기본값 사용)
     if args.rand_crop_size == 0:
         if args.data in ["colon", "pancreas", "lits", "kits"]:
             args.rand_crop_size = (128, 128, 128)
@@ -97,18 +67,11 @@ def main():
             args.rand_crop_size = tuple(args.rand_crop_size * 3)
         else:
             args.rand_crop_size = tuple(args.rand_crop_size)
-
-    # 스냅샷 경로에 데이터셋 이름 추가
     args.snapshot_path = os.path.join(args.snapshot_path, args.data)
 
-    # 로거 설정
     setup_logger(logger_name="test", root=args.snapshot_path, screen=True, tofile=True)
     logger = logging.getLogger(f"test")
     logger.info(str(args))
-
-    # -----------------------------
-    # 3. 데이터 로드
-    # -----------------------------
     test_data = load_data_volume(
         data=args.data,
         batch_size=1,
@@ -121,11 +84,6 @@ def main():
         deterministic=True,
         num_worker=0
     )
-
-    # -----------------------------
-    # 4. 모델 구성 및 가중치 로드
-    # -----------------------------
-    # (1) 이미지 인코더 (3D Vision Transformer)
     img_encoder = ImageEncoderViT_3d(
         depth=12,
         embed_dim=768,
@@ -144,7 +102,6 @@ def main():
     img_encoder.load_state_dict(torch.load(os.path.join(args.snapshot_path, file), map_location='cpu')["encoder_dict"], strict=True)
     img_encoder.to(device)
 
-    # (2) 프롬프트 인코더 (4개 수준의 특징 맵용)
     prompt_encoder_list = []
     for i in range(4):
         prompt_encoder = PromptEncoder(transformer=TwoWayTransformer(depth=2,
@@ -156,15 +113,11 @@ def main():
         prompt_encoder.to(device)
         prompt_encoder_list.append(prompt_encoder)
 
-    # (3) 마스크 디코더 (MLA 구조)
     mask_decoder = VIT_MLAHead(img_size = 96).to(device)
     mask_decoder.load_state_dict(torch.load(os.path.join(args.snapshot_path, file), map_location='cpu')["decoder_dict"],
                           strict=True)
     mask_decoder.to(device)
 
-    # -----------------------------
-    # 5. 손실 함수 및 평가 준비
-    # -----------------------------
     dice_loss = DiceLoss(include_background=False, softmax=False, to_onehot_y=True, reduction="none")
     img_encoder.eval()
     for i in prompt_encoder_list:
@@ -173,85 +126,55 @@ def main():
 
     patch_size = args.rand_crop_size[0]
 
-    # -----------------------------
-    # 6. 모델 추론 함수 정의
-    # -----------------------------
     def model_predict(img, prompt, img_encoder, prompt_encoder, mask_decoder):
-        """
-        한 번의 입력 이미지에 대해 segmentation mask 예측 수행
-        """
-        # 입력 이미지 크기를 512로 맞춤
         out = F.interpolate(img.float(), scale_factor=512 / patch_size, mode='trilinear')
         input_batch = out[0].transpose(0, 1)
-
-        # 이미지 인코더를 통해 feature 추출
         batch_features, feature_list = img_encoder(input_batch)
-        feature_list.append(batch_features) # 최상위 특징 추가
+        feature_list.append(batch_features)
         #feature_list = feature_list[::-1]
-
-        # 포인트 프롬프트 입력 준비
         points_torch = prompt.transpose(0, 1)
-
-        # 프롬프트 인코더를 통해 새로운 feature 조합
         new_feature = []
         for i, (feature, feature_decoder) in enumerate(zip(feature_list, prompt_encoder)):
             if i == 3:
-                # 가장 깊은 레벨에서 프롬프트 반영
                 new_feature.append(
                     feature_decoder(feature.to(device), points_torch.clone(), [patch_size, patch_size, patch_size])
                 )
             else:
                 new_feature.append(feature.to(device))
-
-        # 이미지 크기 축소 후 보조 feature로 추가
         img_resize = F.interpolate(img[0, 0].permute(1, 2, 0).unsqueeze(0).unsqueeze(0).to(device), scale_factor=64/patch_size,
                                    mode="trilinear")
         new_feature.append(img_resize)
-
-        # 마스크 디코더로 segmentation 결과 생성
         masks = mask_decoder(new_feature, 2, patch_size//64)
         masks = masks.permute(0, 1, 4, 2, 3)
         return masks
 
-    # -----------------------------
-    # 7. 테스트 루프
-    # -----------------------------
     with torch.no_grad():
         loss_summary = []
         loss_nsd = []
         for idx, (img, seg, spacing) in enumerate(test_data):
             seg = seg.float()
-            # Ground truth segmentation을 이용해 point prompt 위치 결정
             prompt = F.interpolate(seg[None, :, :, :, :], img.shape[2:], mode="nearest")[0]
             seg = seg.to(device).unsqueeze(0)
             img = img.to(device)
-
             seg_pred = torch.zeros_like(prompt).to(device)
-
-            # 포인트 샘플링
             l = len(torch.where(prompt == 1)[0])
             #np.random.seed(0)
             sample = np.random.choice(np.arange(l), args.num_prompts, replace=True)
             #sample = sample[:3]
-
-            # (x, y, z) 좌표 계산
             x = torch.where(prompt == 1)[1][sample].unsqueeze(1)
             y = torch.where(prompt == 1)[3][sample].unsqueeze(1)
             z = torch.where(prompt == 1)[2][sample].unsqueeze(1)
 
-            # 중심 좌표 계산
             x_m = (torch.max(x) + torch.min(x)) // 2
             y_m = (torch.max(y) + torch.min(y)) // 2
             z_m = (torch.max(z) + torch.min(z)) // 2
 
-            # 패치 크기에 맞게 자르기 위한 최소/최대 좌표 계산
             d_min = x_m - patch_size//2
             d_max = x_m + patch_size//2
             h_min = z_m - patch_size//2
             h_max = z_m + patch_size//2
             w_min = y_m - patch_size//2
             w_max = y_m + patch_size//2
-            # 패치가 이미지 경계를 벗어나는 경우 패딩 계산
             d_l = max(0, -d_min)
             d_r = max(0, d_max - prompt.shape[1])
             h_l = max(0, -h_min)
@@ -259,18 +182,13 @@ def main():
             w_l = max(0, -w_min)
             w_r = max(0, w_max - prompt.shape[3])
 
-            # 실제 패치 내 좌표 변환
             points = torch.cat([x-d_min, y-w_min, z-h_min], dim=1).unsqueeze(1).float()
             points_torch = points.to(device)
-
-            # 패치 추출 및 패딩 적용
             d_min = max(0, d_min)
             h_min = max(0, h_min)
             w_min = max(0, w_min)
             img_patch = img[:, :,  d_min:d_max, h_min:h_max, w_min:w_max].clone()
             img_patch = F.pad(img_patch, (w_l, w_r, h_l, h_r, d_l, d_r))
-
-            # 모델 예측 수행
             pred = model_predict(img_patch,
                                  points_torch,
                                  img_encoder,
@@ -278,20 +196,13 @@ def main():
                                  mask_decoder)
             pred = pred[:,:, d_l:patch_size-d_r, h_l:patch_size-h_r, w_l:patch_size-w_r]
             pred = F.softmax(pred, dim=1)[:,1]
-
-            # 전체 분할 결과에 부분 예측 결과 누적 (예측 결과를 전체 영상 크기로 복원)
             seg_pred[:, d_min:d_max, h_min:h_max, w_min:w_max] += pred
 
             final_pred = F.interpolate(seg_pred.unsqueeze(1), size = seg.shape[2:],  mode="trilinear")
             masks = final_pred > 0.5
-
-            # -----------------------------
-            # 8. Dice & NSD 계산
-            # -----------------------------
             loss = 1 - dice_loss(masks, seg)
             loss_summary.append(loss.detach().cpu().numpy())
 
-            # NSD(Surface Dice) 계산
             ssd = surface_distance.compute_surface_distances((seg == 1)[0, 0].cpu().numpy(),
                                                              (masks==1)[0, 0].cpu().numpy(),
                                                              spacing_mm=spacing[0].numpy())
@@ -301,10 +212,6 @@ def main():
                 " Case {} - Dice {:.6f} | NSD {:.6f}".format(
                     test_data.dataset.img_dict[idx], loss.item(), nsd
                 ))
-            
-        # -----------------------------
-        # 9. 최종 평균 성능 출력
-        # -----------------------------
         logging.info("- Test metrics Dice: " + str(np.mean(loss_summary)))
         logging.info("- Test metrics NSD: " + str(np.mean(loss_nsd)))
 
