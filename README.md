@@ -23,7 +23,16 @@
    - 입력 특징을 주파수 도메인으로 변환 (FFT).
    - 반경 기반 마스크 $M(r)$를 적용하여 고주파 성분(경계 정보) 증폭.
    - 공간 도메인으로 복원 (IFFT) 후 $1 \times 1 \times 1$ Conv 적용.
-3. Adaptive Gated Fusion: 전역 경로의 정보를 바탕으로 국소 경로 정보의 반영 비율을 조정하여 결합합니다.  
+3. Adaptive Gated Fusion: 전역 경로의 정보를 바탕으로 국소 경로 정보의 반영 비율을 조정하여 결합합니다.
+
+<p align="center">
+<img width="700" alt="vis_adapter_internal" src="https://github.com/user-attachments/assets/f77ab864-cab8-439d-b7c8-58a321f890e2" />
+</p> 
+
+위 그림은 제안하는 Dual-path Adapter의 내부 동작 과정을 시각화한 예시입니다. 
+- Global Path는 $3 \times 3 \times 3$ 커널을 통해 주변 정보를 집약(Aggregating/Smoothing)하여, 장기의 전체적인 형태와 공간적 문맥(Spatial Context)을 포착합니다.
+- Local Path는 주파수 도메인에서 고주파 성분을 증폭(Boosting)하여, 의료 영상 내에서 종양의 경계선과 미세한 질감(Texture) 정보를 강조합니다.
+결과적으로 두 경로의 상호보완적인 정보가 융합되어, 전체적인 형태를 포착하면서도 병변의 세부적인 특징은 선명하게 유지하는 향상된 특징 맵을 생성합니다.
 
 ## Results
 실험은 3차원 CT 영상에 대한 4가지 복부 종양(Kidney/Pancreas/Liver/Colon Tumor) 분할 작업을 수행합니다. 데이터셋 및 데이터 전처리, 기본 학습 하이퍼파라미터 설정 등의 자세한 실험 세팅은 [3DSAM-Adapter](https://github.com/med-air/3DSAM-adapter)의 방식을 그대로 따릅니다. 
